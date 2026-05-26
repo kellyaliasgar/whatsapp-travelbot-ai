@@ -6,6 +6,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
+import json
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
@@ -15,17 +16,24 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 # -------------------------------------
 
 def get_gspread_client(readonly=True):
-    credentials_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
-
     scopes = SCOPES if readonly else ["https://www.googleapis.com/auth/spreadsheets"]
 
-    credentials = Credentials.from_service_account_file(
-        credentials_path,
-        scopes=scopes
-    )
+    service_account_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+
+    if service_account_json:
+        credentials_info = json.loads(service_account_json)
+        credentials = Credentials.from_service_account_info(
+            credentials_info,
+            scopes=scopes
+        )
+    else:
+        credentials_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
+        credentials = Credentials.from_service_account_file(
+            credentials_path,
+            scopes=scopes
+        )
 
     return gspread.authorize(credentials)
-
 
 # -------------------------------------
 # LOAD PACKAGES FROM GOOGLE SHEETS
