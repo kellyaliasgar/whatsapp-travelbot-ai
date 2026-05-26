@@ -1,3 +1,8 @@
+Flask
+python-dotenv
+requests
+pandas
 gspread
 google-auth
-pandas
+openai
+gunicorn

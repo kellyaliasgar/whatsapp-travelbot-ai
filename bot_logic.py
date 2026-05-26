@@ -709,7 +709,15 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
     # BUSINESS INFO
     # -------------------------------------
 
-    if message in ["4", "info", "business info", "informacion", "información"]:
+    if message in ["4", "info", "business info", "business information",
+        "informacion", "información", "información de la agencia",
+        "agency info", "agency information",
+        "address", "location", "where are you", "where are you located",
+        "where is the agency", "hours", "opening hours", "phone", "contact",
+        "direccion", "dirección", "ubicacion", "ubicación",
+        "donde estan", "dónde están", "donde están", "dónde estan",
+        "horario", "horarios", "telefono", "teléfono", "contacto"
+    ]:
         if business_info:
             name = business_info.get("business_name", "")
             phone = business_info.get("phone", "")

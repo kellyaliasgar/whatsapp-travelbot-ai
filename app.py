@@ -1,4 +1,4 @@
-print("🔥 RUNNING UPDATED APP.PY WITH IMAGE SUPPORT + FIXED HANDOFF 🔥", flush=True)
+print("🔥 RUNNING UPDATED APP.PY WITH IMAGE SUPPORT + BUSINESS INFO 🔥", flush=True)
 
 import os
 import requests
@@ -6,7 +6,10 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 from bot_logic import handle_user_message
-from google_sheets_reader import load_packages_from_google_sheet
+from google_sheets_reader import (
+    load_packages_from_google_sheet,
+    load_business_info_from_google_sheet
+)
 
 load_dotenv("env.env", override=True)
 
@@ -20,15 +23,19 @@ AGENT_PHONE = os.getenv("AGENT_PHONE")
 GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID")
 
 packages_df = None
+business_info = None
 
 try:
     if GOOGLE_SHEET_ID:
         packages_df = load_packages_from_google_sheet(GOOGLE_SHEET_ID)
+        business_info = load_business_info_from_google_sheet(GOOGLE_SHEET_ID)
+
         print(f"[PACKAGES LOADED AT STARTUP] {len(packages_df)} packages loaded", flush=True)
+        print("[BUSINESS INFO LOADED]", flush=True)
     else:
         print("[PACKAGES NOT LOADED] GOOGLE_SHEET_ID missing in env.env", flush=True)
 except Exception as e:
-    print("[PACKAGES LOAD ERROR]", e, flush=True)
+    print("[STARTUP LOAD ERROR]", e, flush=True)
 
 
 def get_default_state():
@@ -56,6 +63,24 @@ def reload_packages():
     except Exception as e:
         print("[PACKAGES RELOAD ERROR]", e, flush=True)
         return packages_df
+
+
+def reload_business_info():
+    global business_info
+
+    try:
+        if GOOGLE_SHEET_ID:
+            latest_business_info = load_business_info_from_google_sheet(GOOGLE_SHEET_ID)
+            business_info = latest_business_info
+            print("[BUSINESS INFO RELOADED]", flush=True)
+            return latest_business_info
+
+        print("[BUSINESS INFO NOT RELOADED] GOOGLE_SHEET_ID missing", flush=True)
+        return business_info
+
+    except Exception as e:
+        print("[BUSINESS INFO RELOAD ERROR]", e, flush=True)
+        return business_info
 
 
 def send_whatsapp_message(to_number, message_text):
@@ -185,6 +210,7 @@ def build_agent_flight_message(customer_number, state):
         "📩 New Flight Request\n\n"
         f"Customer WhatsApp: {customer_number}\n\n"
         f"Name: {flight.get('name', '')}\n"
+        f"Phone: {flight.get('phone', '')}\n"
         f"Email: {flight.get('email', '')}\n"
         f"Trip Type: {flight.get('trip_type', '')}\n"
         f"From: {flight.get('origin', '')}\n"
@@ -205,6 +231,7 @@ def build_agent_package_message(customer_number, state):
         "📩 New Package Request\n\n"
         f"Customer WhatsApp: {customer_number}\n\n"
         f"Name: {state.get('customer_name', '')}\n"
+        f"Phone: {state.get('customer_phone', '')}\n"
         f"Last Search: {state.get('last_search', '')}\n"
         f"Interested Packages: {interested_text}\n\n"
         "Status: new"
@@ -213,24 +240,62 @@ def build_agent_package_message(customer_number, state):
 
 def build_agent_handoff_message(customer_number, state):
     interested_packages = state.get("interested_packages", [])
-    interested_text = ", ".join(interested_packages) if interested_packages else "Not specified"
+    lang = state.get("language", "en")
+
+    interested_text = (
+        ", ".join(interested_packages)
+        if interested_packages
+        else ("No especificado" if lang == "es" else "Not specified")
+    )
 
     flight = state.get("flight", {})
 
     flight_text = ""
+
     if flight:
-        flight_text = (
-            "\n\nPartial Flight Details:\n"
-            f"Name: {flight.get('name', '')}\n"
-            f"Phone: {flight.get('phone', '')}\n"
-            f"Email: {flight.get('email', '')}\n"
-            f"Trip Type: {flight.get('trip_type', '')}\n"
-            f"From: {flight.get('origin', '')}\n"
-            f"To: {flight.get('destination', '')}\n"
-            f"Departure Date: {flight.get('departure_date', '')}\n"
-            f"Return Date: {flight.get('return_date', '')}\n"
-            f"Passengers: {flight.get('passengers', '')}\n"
-            f"Preferences: {flight.get('preferences', '')}"
+        if state.get("language") == "es":
+            flight_text = (
+                "\n\nDetalles parciales del vuelo:\n"
+                f"Nombre: {flight.get('name', '')}\n"
+                f"Teléfono: {flight.get('phone', '')}\n"
+                f"Correo: {flight.get('email', '')}\n"
+                f"Tipo de viaje: {flight.get('trip_type', '')}\n"
+                f"Desde: {flight.get('origin', '')}\n"
+                f"Hacia: {flight.get('destination', '')}\n"
+                f"Fecha de salida: {flight.get('departure_date', '')}\n"
+                f"Fecha de regreso: {flight.get('return_date', '')}\n"
+                f"Pasajeros: {flight.get('passengers', '')}\n"
+                f"Preferencias: {flight.get('preferences', '')}"
+            )
+        else:
+            flight_text = (
+                "\n\nPartial Flight Details:\n"
+                f"Name: {flight.get('name', '')}\n"
+                f"Phone: {flight.get('phone', '')}\n"
+                f"Email: {flight.get('email', '')}\n"
+                f"Trip Type: {flight.get('trip_type', '')}\n"
+                f"From: {flight.get('origin', '')}\n"
+                f"To: {flight.get('destination', '')}\n"
+                f"Departure Date: {flight.get('departure_date', '')}\n"
+                f"Return Date: {flight.get('return_date', '')}\n"
+                f"Passengers: {flight.get('passengers', '')}\n"
+                f"Preferences: {flight.get('preferences', '')}"
+            )
+
+
+    if lang == "es":
+        return (
+            "📩 Nueva solicitud para asesor\n\n"
+            f"WhatsApp del cliente: {customer_number}\n\n"
+            f"Paso actual: {state.get('step', '')}\n"
+            f"Tipo de lead: {state.get('lead_type', 'general')}\n"
+            f"Idioma: Español\n\n"
+            f"Nombre: {state.get('customer_name', 'No recopilado')}\n"
+            f"Última búsqueda: {state.get('last_search', 'No especificada')}\n"
+            f"Paquetes de interés: {interested_text}\n"
+            f"Último mensaje: {state.get('last_user_message', '')}"
+            f"{flight_text}\n\n"
+            "Estado: nuevo"
         )
 
     return (
@@ -238,7 +303,7 @@ def build_agent_handoff_message(customer_number, state):
         f"Customer WhatsApp: {customer_number}\n\n"
         f"Current Step: {state.get('step', '')}\n"
         f"Lead Type: {state.get('lead_type', 'general')}\n"
-        f"Language: {state.get('language', 'en')}\n\n"
+        f"Language: English\n\n"
         f"Name: {state.get('customer_name', 'Not collected')}\n"
         f"Last Search: {state.get('last_search', 'Not specified')}\n"
         f"Interested Packages: {interested_text}\n"
@@ -302,6 +367,7 @@ def webhook():
                     return jsonify({"status": "reset"}), 200
 
                 latest_packages_df = reload_packages()
+                latest_business_info = reload_business_info()
 
                 if state.get("step") == "start" and user_text.lower() in ["hi", "hello", "hola"]:
                     if user_text.lower() == "hola":
@@ -312,7 +378,8 @@ def webhook():
                             "Escribe:\n"
                             "1️⃣ Paquetes\n"
                             "2️⃣ Vuelos\n"
-                            "3️⃣ Hablar con un asesor"
+                            "3️⃣ Hablar con un asesor\n"
+                            "4️⃣ Información de la agencia"
                         )
                     else:
                         reply = (
@@ -321,7 +388,8 @@ def webhook():
                             "Type:\n"
                             "1️⃣ Packages\n"
                             "2️⃣ Flights\n"
-                            "3️⃣ Talk to an agent"
+                            "3️⃣ Talk to an agent\n"
+                            "4️⃣ Business information"
                         )
 
                     updated_state = state
@@ -332,6 +400,7 @@ def webhook():
                     reply, updated_state = handle_user_message(
                         user_text,
                         packages_df=latest_packages_df,
+                        business_info=latest_business_info,
                         memory=state
                     )
 
@@ -342,8 +411,6 @@ def webhook():
                             latest_packages_df
                         )
 
-                    # Universal human handoff notification
-                    # Sends immediately using the customer's WhatsApp number
                     if (
                         updated_state.get("last_intent") == "human_handoff"
                         and not updated_state.get("agent_notified_handoff")
@@ -355,7 +422,6 @@ def webhook():
                         else:
                             print("[AGENT PHONE MISSING] Add AGENT_PHONE to env.env", flush=True)
 
-                    # Completed flight request notification
                     if (
                         updated_state.get("lead_type") == "flight"
                         and updated_state.get("step") == "handoff"
@@ -369,7 +435,6 @@ def webhook():
                         else:
                             print("[AGENT PHONE MISSING] Add AGENT_PHONE to env.env", flush=True)
 
-                    # Completed package lead notification
                     if previous_collecting == "customer_phone" and updated_state.get("collecting") == "":
                         if updated_state.get("lead_type") == "package":
                             if AGENT_PHONE:
