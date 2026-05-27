@@ -284,6 +284,21 @@ def refinement_intro(lang="en"):
     return "Sure 😊 I refined the search with your new preference:\n\n"
 
 
+def looks_like_destination_request(message):
+    msg = message.lower().strip()
+
+    cleaned = msg.replace(" ", "")
+
+    if (
+        len(msg.split()) <= 3
+        and cleaned.isalpha()
+        and len(cleaned) >= 3
+    ):
+        return True
+
+    return False
+
+
 # =========================================
 # MAIN MESSAGE HANDLER
 # =========================================
@@ -381,7 +396,7 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
         memory["customer_phone"] = phone_input
         memory["collecting"] = ""
         memory["handoff_requested"] = True
-        memory["lead_type"] = "package"
+        memory["lead_type"] = memory.get("lead_type", "package")
 
         lead_data = {
             "customer_phone": memory.get("customer_phone", ""),
@@ -390,7 +405,7 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
             "interested_packages": memory.get("interested_packages", []),
             "last_message": memory.get("last_user_message", ""),
             "handoff_requested": True,
-            "lead_type": "package",
+            "lead_type": memory.get("lead_type", "package"),
             "status": "new"
         }
 
@@ -823,6 +838,51 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
                 "➡️ Type 'more' to see other options\n"
                 "➡️ Type 'agent' to talk to an advisor"
             ), memory
+
+        if looks_like_destination_request(user_message):
+            if lang == "es":
+                return (
+                    "Entiendo 😊 Parece que estás buscando ese destino, "
+                    "pero en este momento no tengo paquetes disponibles para esa opción.\n\n"
+                    "¿Te gustaría que un asesor te ayude a cotizarlo?\n\n"
+                    "➡️ Escribe 'asesor' para hablar con un asesor\n"
+                    "➡️ Escribe 'vuelos' para solicitar un vuelo\n"
+                    "➡️ Escribe 'paquetes' para ver otros paquetes"
+                ), memory
+
+            return (
+                "I understand 😊 It looks like you’re searching for that destination, "
+                "but I don’t currently have packages available for it.\n\n"
+                "Would you like a travel advisor to help quote it?\n\n"
+                "➡️ Type 'agent' to speak with an advisor\n"
+                "➡️ Type 'flights' to request a flight\n"
+                "➡️ Type 'packages' to browse other packages"
+            ), memory
+
+
+    memory["fallback_count"] = memory.get("fallback_count", 0) + 1
+
+    if memory["fallback_count"] >= 3:
+        memory["last_intent"] = "human_handoff"
+        memory["handoff_requested"] = True
+        memory["lead_type"] = memory.get("lead_type", "general")
+        memory["collecting"] = "customer_name"
+        memory["step"] = "fallback_handoff_name"
+
+        if lang == "es":
+            return (
+                "Lo siento 😊 Estoy teniendo dificultad para entender tu solicitud.\n\n"
+                "Te voy a conectar con un asesor para ayudarte mejor.\n\n"
+                "¿Cuál es tu nombre?"
+            ), memory
+
+        return (
+            "I’m sorry 😊 I’m having trouble understanding your request.\n\n"
+            "I’ll connect you with a travel advisor so they can help you better.\n\n"
+            "What is your name?"
+        ), memory
+
+ 
 
     if lang == "es":
         return (
