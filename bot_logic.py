@@ -840,6 +840,28 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
             ), memory
 
         if looks_like_destination_request(user_message):
+            memory["no_package_count"] = memory.get("no_package_count", 0) + 1
+
+            if memory["no_package_count"] >= 3:
+                memory["last_intent"] = "human_handoff"
+                memory["handoff_requested"] = True
+                memory["lead_type"] = "general"
+                memory["collecting"] = "customer_name"
+                memory["step"] = "no_package_handoff_name"
+
+                if lang == "es":
+                    return (
+                        "Veo que sigues interesado en ese destino 😊\n\n"
+                        "Te voy a conectar con un asesor para ayudarte a cotizarlo.\n\n"
+                        "¿Cuál es tu nombre?"
+                    ), memory
+
+                return (
+                    "I see you’re still interested in that destination 😊\n\n"
+                    "I’ll connect you with a travel advisor to help quote it.\n\n"
+                    "What is your name?"
+                ), memory
+
             if lang == "es":
                 return (
                     "Entiendo 😊 Parece que estás buscando ese destino, "
