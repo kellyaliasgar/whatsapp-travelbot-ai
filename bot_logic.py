@@ -292,7 +292,7 @@ def looks_like_destination_request(message):
     travel_keywords = [
     "japan", "tokyo", "dubai", "thailand", "italy",
     "spain", "france", "peru", "brazil", "mexico",
-    "miami", "orlando", "aruba", "colombia"
+    "miami", "orlando", "aruba", "colombia", "china", "beijing", "shanghai"
     ]
 
     if cleaned in travel_keywords:
@@ -817,33 +817,6 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
                 else "Great choice 😊 Here are some options that match what you’re looking for:\n\n"
             )
 
-        results = filter_packages(packages_df, smart_query)
-
-        if not results.empty:
-            memory["last_search"] = smart_query
-            memory["last_intent"] = "package_search"
-            memory["lead_type"] = "package"
-            memory["interested_packages"] = results["package_name"].head(3).tolist()
-
-            if lang == "es":
-                return (
-                    intro
-                    + format_packages_for_whatsapp(results, lang=lang)
-                    + "\n\n¿Qué te gustaría hacer?\n"
-                    "➡️ Escribe 'reservar' para solicitar este paquete\n"
-                    "➡️ Escribe 'más' para ver otras opciones\n"
-                    "➡️ Escribe 'asesor' para hablar con un asesor"
-                ), memory
-
-            return (
-                intro
-                + format_packages_for_whatsapp(results, lang=lang)
-                + "\n\nWould you like:\n"
-                "➡️ Type 'book' to request this package\n"
-                "➡️ Type 'more' to see other options\n"
-                "➡️ Type 'agent' to talk to an advisor"
-            ), memory
-
         if looks_like_destination_request(user_message):
             memory["last_search"] = user_message
             memory["no_package_count"] = memory.get("no_package_count", 0) + 1
@@ -886,6 +859,34 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
                 "➡️ Type 'agent' to speak with an advisor\n"
                 "➡️ Type 'flights' to request a flight\n"
                 "➡️ Type 'packages' to browse other packages"
+            ), memory
+
+
+        results = filter_packages(packages_df, smart_query)
+
+        if not results.empty:
+            memory["last_search"] = smart_query
+            memory["last_intent"] = "package_search"
+            memory["lead_type"] = "package"
+            memory["interested_packages"] = results["package_name"].head(3).tolist()
+
+            if lang == "es":
+                return (
+                    intro
+                    + format_packages_for_whatsapp(results, lang=lang)
+                    + "\n\n¿Qué te gustaría hacer?\n"
+                    "➡️ Escribe 'reservar' para solicitar este paquete\n"
+                    "➡️ Escribe 'más' para ver otras opciones\n"
+                    "➡️ Escribe 'asesor' para hablar con un asesor"
+                ), memory
+
+            return (
+                intro
+                + format_packages_for_whatsapp(results, lang=lang)
+                + "\n\nWould you like:\n"
+                "➡️ Type 'book' to request this package\n"
+                "➡️ Type 'more' to see other options\n"
+                "➡️ Type 'agent' to talk to an advisor"
             ), memory
 
 
