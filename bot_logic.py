@@ -841,6 +841,7 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
 
         if looks_like_destination_request(user_message):
             memory["no_package_count"] = memory.get("no_package_count", 0) + 1
+            print("[NO PACKAGE COUNT]", memory.get("no_package_count"), flush=True)
 
             if memory["no_package_count"] >= 3:
                 memory["last_intent"] = "human_handoff"
