@@ -397,6 +397,9 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
 
         memory["customer_phone"] = phone_input
         memory["collecting"] = ""
+        memory["last_intent"] = "human_handoff"
+        memory["handoff_requested"] = True
+        memory["step"] = "handoff"
         memory["handoff_requested"] = True
         memory["lead_type"] = memory.get("lead_type", "package")
 
