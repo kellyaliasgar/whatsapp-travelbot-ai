@@ -289,11 +289,13 @@ def looks_like_destination_request(message):
 
     cleaned = msg.replace(" ", "")
 
-    if (
-        len(msg.split()) <= 3
-        and cleaned.isalpha()
-        and len(cleaned) >= 3
-    ):
+    travel_keywords = [
+    "japan", "tokyo", "dubai", "thailand", "italy",
+    "spain", "france", "peru", "brazil", "mexico",
+    "miami", "orlando", "aruba", "colombia"
+    ]
+
+    if cleaned in travel_keywords:
         return True
 
     return False
@@ -844,8 +846,8 @@ def handle_user_message(user_message, packages_df=None, business_info=None, memo
             print("[NO PACKAGE COUNT]", memory.get("no_package_count"), flush=True)
 
             if memory["no_package_count"] >= 3:
-                memory["last_intent"] = "human_handoff"
-                memory["handoff_requested"] = True
+                memory["last_intent"] = "fallback_handoff_collecting"
+                memory["handoff_requested"] = False
                 memory["lead_type"] = "general"
                 memory["collecting"] = "customer_name"
                 memory["step"] = "no_package_handoff_name"
